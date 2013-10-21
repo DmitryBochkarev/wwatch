@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	VERSION = "0.6.1"
+	VERSION = "0.6.2"
 )
 
 var (
@@ -55,11 +56,14 @@ func main() {
 
 	log.SetPrefix(fmt.Sprintf("wwatch %s ", matchPattern))
 
+	done := make(chan os.Signal, 1)
+
+	signal.Notify(done, os.Interrupt, os.Kill)
+
 	cmd := execCommand(commandString, cwd)
 
 	var timer <-chan time.Time
 
-	done := make(chan bool)
 	quit := make(chan bool)
 	event := make(chan *fsnotify.FileEvent)
 
@@ -98,7 +102,8 @@ func main() {
 			timer = time.After(delay)
 		case <-timer:
 			cmd = execCommand(commandString, cwd)
-		case <-done:
+		case signal := <-done:
+			fmt.Println("Got signal:", signal)
 			close(quit)
 			return
 		}
