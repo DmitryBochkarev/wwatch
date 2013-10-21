@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	VERSION = "0.6.3"
+	VERSION = "0.6.4"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 func init() {
 	flag.StringVar(&dir, "dir", ".", "directory to watch")
 	flag.StringVar(&commandString, "cmd", "", "command to run")
-	flag.StringVar(&shutdownString, "kill", "", "command to shutdown process. Example: kill -9 $WWATCH_PID")
+	flag.StringVar(&shutdownString, "kill", "", "command to shutdown process. Example: kill -9 $WWATCH_PID. Default send INT signal.")
 	flag.StringVar(&matchPattern, "match", ".*", "file(fullpath) match regexp")
 	flag.StringVar(&cwd, "cwd", ".", "current working directory")
 	flag.DurationVar(&delay, "delay", time.Duration(100*time.Millisecond), "delay before rerun cmd")
@@ -175,7 +175,7 @@ func execCommand(commandString, cwd string) *exec.Cmd {
 func stopCommand(cmd *exec.Cmd, shutdownString string) {
 	if shutdownString == "" {
 		if cmd.ProcessState == nil {
-			cmd.Process.Kill()
+			cmd.Process.Signal(os.Interrupt)
 		}
 		cmd.Wait()
 		return
