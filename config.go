@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 )
@@ -18,41 +21,72 @@ type Config struct {
 	KillArgs []string `toml:"kill_args"`
 	Match    string   `toml:"match"`
 	Delay    string   `toml:"delay"`
-	Run      map[string]*Config
+	Run      map[string]Config
 
-	parent *Config
+	configFile string
+	parent     *Config
 }
 
 func (c *Config) Load(file string) {
-	configData, err := ioutil.ReadFile(file)
+	cwd, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+	c.configFile = resolvePath(cwd, file)
+	configData, err := ioutil.ReadFile(c.configFile)
+	if err != nil {
+		log.Fatal(err)
 	}
 	if _, err := toml.Decode(string(configData), c); err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+}
+
+func (c *Config) GetConfigPath() string {
+	switch {
+	case c.configFile != "":
+		return filepath.Dir(c.configFile)
+	case c.parent != nil:
+		return c.parent.GetConfigPath()
+	default:
+		return ""
 	}
 }
 
 func (c *Config) GetDir() string {
+	var dir string
 	switch {
 	case c.Dir != "":
-		return c.Dir
+		dir = c.Dir
 	case c.parent != nil:
-		return c.parent.GetDir()
+		dir = c.parent.GetDir()
 	default:
-		return DEFAULT_DIR
+		dir = DEFAULT_DIR
 	}
+
+	if configPath := c.GetConfigPath(); configPath != "" {
+		dir = resolvePath(configPath, dir)
+	}
+
+	return dir
 }
 
 func (c *Config) GetCwd() string {
+	var dir string
 	switch {
 	case c.Cwd != "":
-		return c.Cwd
+		dir = c.Cwd
 	case c.parent != nil:
-		return c.parent.GetCwd()
+		dir = c.parent.GetCwd()
 	default:
-		return DEFAULT_CWD
+		dir = DEFAULT_CWD
 	}
+
+	if configPath := c.GetConfigPath(); configPath != "" {
+		dir = resolvePath(configPath, dir)
+	}
+
+	return dir
 }
 
 func (c *Config) GetCmd() string {
@@ -85,7 +119,7 @@ func (c *Config) GetKillArgs() []string {
 	}
 }
 
-func (c *Config) GetMatch() regexp.Regexp {
+func (c *Config) GetMatch() *regexp.Regexp {
 	switch {
 	case c.Match != "":
 		rx, err := regexp.Compile(c.Match)
@@ -111,14 +145,18 @@ func (c *Config) GetDelay() time.Duration {
 	case c.parent != nil:
 		return c.parent.GetDelay()
 	default:
-		return DEFAULT_DELAY
+		delay, err := time.ParseDuration(DEFAULT_DELAY)
+		if err != nil {
+			panic(err)
+		}
+		return delay
 	}
 }
 
 func (c *Config) Tasks() (*map[string]*Task, error) {
 	tasks := make(map[string]*Task)
 	switch {
-	case c.GetCmd() != nil && len(c.Run) > 0:
+	case c.GetCmd() != "" && len(c.Run) > 0:
 		panic(errors.New("You can't specify tasks in main and run sections at the same time."))
 	case c.GetCmd() != "":
 		task, err := NewTask(c)
@@ -129,16 +167,16 @@ func (c *Config) Tasks() (*map[string]*Task, error) {
 	case len(c.Run) > 0:
 		for name, run := range c.Run {
 			run.parent = c
-			task, err := NewTask(run)
+			task, err := NewTask(&run)
 			if err != nil {
 				panic(err)
 			}
 			tasks[name] = task
 		}
 	default:
-		panic(errors.New("Task not found"))
+		return nil, errors.New("Task not found")
 	}
-	return &tasks
+	return &tasks, nil
 }
 
 func (c Config) String() string {
