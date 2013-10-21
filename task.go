@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"fmt"
 	"github.com/howeyc/fsnotify"
 	"log"
@@ -12,32 +13,51 @@ import (
 )
 
 type Task struct {
-	Dir      string
-	Cwd      string
-	Cmd      string
-	CmdArgs  []string
-	Kill     string
-	KillArgs []string
-	Match    *regexp.Regexp
-	Delay    time.Duration
-	Recursive    bool
+	Dir       string
+	Cwd       string
+	Cmd       string
+	CmdArgs   []string
+	Kill      string
+	KillArgs  []string
+	Match     *regexp.Regexp
+	Delay     time.Duration
+	Recursive bool
 
 	command *exec.Cmd
 }
 
 func NewTask(c *Config) (*Task, error) {
 	task := &Task{
-		Dir:      c.GetDir(),
-		Cwd:      c.GetCwd(),
-		Cmd:      c.GetCmd(),
-		CmdArgs:  c.GetCmdArgs(),
-		Kill:     c.GetKill(),
-		KillArgs: c.GetKillArgs(),
-		Match:    c.GetMatch(),
-		Delay:    c.GetDelay(),
+		Dir:       c.GetDir(),
+		Cwd:       c.GetCwd(),
+		Cmd:       c.GetCmd(),
+		CmdArgs:   c.GetCmdArgs(),
+		Kill:      c.GetKill(),
+		KillArgs:  c.GetKillArgs(),
+		Match:     c.GetMatch(),
+		Delay:     c.GetDelay(),
 		Recursive: c.GetRecursive(),
 	}
 	return task, nil
+}
+
+func (t *Task) StartWatch(quit chan bool, event chan *fsnotify.FileEvent) {
+	if !t.Recursive {
+		go startWatcher(t.Dir, quit, event)
+		return
+	}
+
+	filepath.Walk(t.Dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Print(err)
+			return nil
+		}
+		if !info.IsDir() {
+			return nil
+		}
+		go startWatcher(path, quit, event)
+		return nil
+	})
 }
 
 func (t *Task) Run(done chan bool) {
@@ -48,7 +68,7 @@ func (t *Task) Run(done chan bool) {
 	quit := make(chan bool)
 	event := make(chan *fsnotify.FileEvent)
 
-	startWatch(t, quit, event)
+	t.StartWatch(quit, event)
 
 	var rerunMx sync.Mutex
 	for {
@@ -57,7 +77,7 @@ func (t *Task) Run(done chan bool) {
 			if ev.IsCreate() || ev.IsDelete() || ev.IsRename() {
 				close(quit)
 				quit = make(chan bool)
-				startWatch(t, quit, event)
+				t.StartWatch(quit, event)
 			}
 
 			if !t.Match.MatchString(ev.Name) {

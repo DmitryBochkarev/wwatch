@@ -3,29 +3,9 @@ package main
 import (
 	"github.com/howeyc/fsnotify"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 )
-
-func startWatch(t *Task, quit chan bool, event chan *fsnotify.FileEvent) {
-	if !t.Recursive {
-		return
-		go startWatcher(t.Dir, quit, event)
-	}
-
-	filepath.Walk(t.Dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			log.Print(err)
-			return nil
-		}
-		if !info.IsDir() {
-			return nil
-		}
-		go startWatcher(path, quit, event)
-		return nil
-	})
-}
 
 func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
 	// log.Printf("Define watcher %s\n", dir)
