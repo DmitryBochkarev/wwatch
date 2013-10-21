@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
-	VERSION = "0.6.2"
+	VERSION = "0.6.3"
 )
 
 var (
@@ -69,21 +70,14 @@ func main() {
 
 	startWatch(dir, quit, event)
 
+	var rerunMx sync.Mutex
+
 	for {
 		select {
 		case ev := <-event:
-			removeWatchers := false
-
 			if ev.IsCreate() || ev.IsDelete() || ev.IsRename() {
-				removeWatchers = true
-			}
-
-			if removeWatchers {
 				close(quit)
 				quit = make(chan bool)
-			}
-
-			if removeWatchers {
 				startWatch(dir, quit, event)
 			}
 
@@ -93,15 +87,16 @@ func main() {
 
 			log.Printf("File changed(%s)", ev.String())
 
-			stopCommand(cmd, shutdownString)
-
 			if delay >= time.Duration(500*time.Millisecond) {
-				log.Printf("wait %s before run...\n", delay)
+				log.Printf("wait %s before rerun...\n", delay)
 			}
 
 			timer = time.After(delay)
 		case <-timer:
+			rerunMx.Lock()
+			stopCommand(cmd, shutdownString)
 			cmd = execCommand(commandString, cwd)
+			rerunMx.Unlock()
 		case signal := <-done:
 			fmt.Println("Got signal:", signal)
 			close(quit)
