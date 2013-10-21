@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	VERSION = "0.6.4"
+	VERSION = "0.6.5"
 )
 
 var (
@@ -99,6 +99,7 @@ func main() {
 			rerunMx.Unlock()
 		case signal := <-done:
 			fmt.Println("Got signal:", signal)
+			stopCommand(cmd, shutdownString)
 			close(quit)
 			return
 		}
