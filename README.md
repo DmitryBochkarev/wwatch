@@ -1,11 +1,13 @@
 ## Installation
 
-`go get -u github.com/DmitryBochkarev/watch`
+`go get -u github.com/DmitryBochkarev/wwatch`
 
 ## Usage
 
-`watch -dir='.' -cmd='go run *.go' -match='.*\.go$'`
+`wwatch -dir='.' -cmd='go run *.go' -match='.*\.go$'`
 
 ## TODO
 
 - config file
+- after kill callback
+- custom kill command `kill -9 $WATCH_PID`
