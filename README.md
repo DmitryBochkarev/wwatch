@@ -4,10 +4,20 @@
 
 ## Usage
 
-`wwatch -dir='.' -cmd='go run *.go' -match='.*\.go$'`
+<pre>
+  -cmd="": command to run
+  -cwd=".": current working directory
+  -delay=100ms: delay before rerun cmd
+  -dir=".": directory to watch
+  -kill="": command to shutdown process. Example: kill -9 $WWATCH_PID
+  -match=".*": file(fullpath) match regexp
+  -version=false: print version
+</pre>
+
+## Example
+
+`wwatch -cmd='go run *.go' -match='.*\.go$'`
 
 ## TODO
 
 - config file
-- after kill callback
-- custom kill command `kill -9 $WATCH_PID`

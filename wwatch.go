@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	VERSION = "0.6.0"
+	VERSION = "0.6.1"
 )
 
 var (
 	dir, commandString, matchPattern string
-	cwd                              string
+	cwd, shutdownString              string
 	delay                            time.Duration
 	printVertion                     bool
 )
@@ -27,6 +27,7 @@ var (
 func init() {
 	flag.StringVar(&dir, "dir", ".", "directory to watch")
 	flag.StringVar(&commandString, "cmd", "", "command to run")
+	flag.StringVar(&shutdownString, "kill", "", "command to shutdown process. Example: kill -9 $WWATCH_PID")
 	flag.StringVar(&matchPattern, "match", ".*", "file(fullpath) match regexp")
 	flag.StringVar(&cwd, "cwd", ".", "current working directory")
 	flag.DurationVar(&delay, "delay", time.Duration(100*time.Millisecond), "delay before rerun cmd")
@@ -41,6 +42,7 @@ func main() {
 	if printVertion {
 		log.Fatalf("version: %s", VERSION)
 	}
+
 	if commandString == "" {
 		log.Fatal("You should specify command(-cmd='cal')")
 	}
@@ -87,7 +89,7 @@ func main() {
 
 			log.Printf("File changed(%s)", ev.String())
 
-			stopCommand(cmd)
+			stopCommand(cmd, shutdownString)
 
 			if delay >= time.Duration(500*time.Millisecond) {
 				log.Printf("wait %s before run...\n", delay)
@@ -157,6 +159,8 @@ func parseCommandString(commandString string) (exe string, args []string) {
 }
 
 func execCommand(commandString, cwd string) *exec.Cmd {
+	commandString = os.Expand(commandString, os.Getenv)
+
 	exe, args := parseCommandString(commandString)
 	log.Printf("run %s %v\n", exe, args)
 	cmd := exec.Command(exe, args...)
@@ -168,9 +172,31 @@ func execCommand(commandString, cwd string) *exec.Cmd {
 	return cmd
 }
 
-func stopCommand(cmd *exec.Cmd) {
-	if cmd.ProcessState == nil {
-		cmd.Process.Kill()
+func stopCommand(cmd *exec.Cmd, shutdownString string) {
+	if shutdownString == "" {
+		if cmd.ProcessState == nil {
+			cmd.Process.Kill()
+		}
+		cmd.Wait()
+		return
 	}
+
+	shutdownString = os.Expand(shutdownString, func(v string) string {
+		if v == "WWATCH_PID" {
+			return fmt.Sprintf("%d", cmd.Process.Pid)
+		}
+		return fmt.Sprintf("${%s}", v)
+	})
+
+	shutdownString = os.Expand(shutdownString, os.Getenv)
+
+	exe, args := parseCommandString(shutdownString)
+	log.Printf("run %s %v\n", exe, args)
+	cmdKill := exec.Command(exe, args...)
+	cmdKill.Dir = cwd
+	cmdKill.Stdout = os.Stdout
+	cmdKill.Stderr = os.Stderr
+	cmdKill.Run()
+
 	cmd.Wait()
 }
