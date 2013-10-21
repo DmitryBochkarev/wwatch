@@ -15,6 +15,7 @@ import (
 
 var (
 	dir, commandString, matchPattern string
+	cwd                              string
 	delay                            time.Duration
 )
 
@@ -22,22 +23,23 @@ func init() {
 	flag.StringVar(&dir, "dir", ".", "directory to watch")
 	flag.StringVar(&commandString, "cmd", "", "command to run")
 	flag.StringVar(&matchPattern, "match", ".*", "file(fullpath) match regexp")
+	flag.StringVar(&cwd, "cwd", ".", "current working directory")
 	flag.DurationVar(&delay, "delay", time.Duration(100*time.Millisecond), "delay before rerun cmd")
 }
 
 func main() {
 	flag.Parse()
 
-	log.SetPrefix("watch")
+	log.SetPrefix("watch ")
 	if commandString == "" {
-		log.Fatal("You should specify command.")
+		log.Fatal("You should specify command(-cmd='cal')")
 	}
 	matchRx, err := regexp.Compile(matchPattern)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.SetPrefix(fmt.Sprintf("watch %s ", matchPattern))
-	cmd := execCommand(commandString)
+	cmd := execCommand(commandString, cwd)
 
 	done := make(chan bool)
 	quit := make(chan bool)
@@ -62,7 +64,7 @@ func main() {
 				log.Printf("wait %s before run...\n", delay)
 			}
 			time.Sleep(delay)
-			cmd = execCommand(commandString)
+			cmd = execCommand(commandString, cwd)
 			startWatch(dir, quit, event)
 		case <-done:
 			close(quit)
@@ -121,10 +123,11 @@ func parseCommandString(commandString string) (exe string, args []string) {
 	return
 }
 
-func execCommand(commandString string) *exec.Cmd {
+func execCommand(commandString, cwd string) *exec.Cmd {
 	exe, args := parseCommandString(commandString)
 	log.Printf("run %s %v\n", exe, args)
 	cmd := exec.Command(exe, args...)
+	cmd.Dir = cwd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Start()
