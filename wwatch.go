@@ -14,6 +14,7 @@ const (
 	DEFAULT_CWD           = "."
 	DEFAULT_MATCH_PATTERN = ".*"
 	DEFAULT_DELAY         = "100ms"
+	DEFAULT_RECURSIVE     = false
 )
 
 var (
@@ -21,7 +22,7 @@ var (
 	commandLineDelay                                        string
 	commandLineCommand, commandLineKill                     string
 	commandLineConfig                                       string
-	commandLinePrintVersion                                 bool
+	commandLineRecursive, commandLinePrintVersion           bool
 
 	config Config
 	tasks  *map[string]*Task
@@ -35,6 +36,7 @@ func init() {
 	flag.StringVar(&commandLineCommand, "cmd", "", "command to run")
 	flag.StringVar(&commandLineKill, "kill", "", "command to shutdown process. Example: kill -9 $WWATCH_PID. Default send INT signal.")
 	flag.StringVar(&commandLineConfig, "config", "", "path to configuration file(*.toml)")
+	flag.BoolVar(&commandLineRecursive, "recursive", DEFAULT_RECURSIVE, "walk recursive over directories")
 	flag.BoolVar(&commandLinePrintVersion, "version", false, "print version")
 }
 
@@ -55,6 +57,7 @@ func main() {
 		config.Cwd = commandLineCwd
 		config.Match = commandLineMatchPattern
 		config.Delay = commandLineDelay
+		config.Recursive = &commandLineRecursive
 		cmd, cmdArgs := parseCommandString(commandLineCommand)
 		config.Cmd = cmd
 		config.CmdArgs = cmdArgs

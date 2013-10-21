@@ -13,15 +13,17 @@ import (
 )
 
 type Config struct {
-	Dir      string   `toml:"dir"`
-	Cwd      string   `toml:"cwd"`
-	Cmd      string   `toml:"cmd"`
-	CmdArgs  []string `toml:"args"`
-	Kill     string   `toml:"kill"`
-	KillArgs []string `toml:"kill_args"`
-	Match    string   `toml:"match"`
-	Delay    string   `toml:"delay"`
-	Run      map[string]Config
+	Dir       string   `toml:"dir"`
+	Cwd       string   `toml:"cwd"`
+	Cmd       string   `toml:"cmd"`
+	CmdArgs   []string `toml:"args"`
+	Kill      string   `toml:"kill"`
+	KillArgs  []string `toml:"kill_args"`
+	Match     string   `toml:"match"`
+	Delay     string   `toml:"delay"`
+	Recursive *bool    `toml:"recursive"`
+
+	Run map[string]Config
 
 	configFile string
 	parent     *Config
@@ -150,6 +152,17 @@ func (c *Config) GetDelay() time.Duration {
 			panic(err)
 		}
 		return delay
+	}
+}
+
+func (c *Config) GetRecursive() bool {
+	switch {
+	case c.Recursive != nil:
+		return *c.Recursive
+	case c.parent != nil:
+		return c.parent.GetRecursive()
+	default:
+		return DEFAULT_RECURSIVE
 	}
 }
 

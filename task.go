@@ -20,6 +20,7 @@ type Task struct {
 	KillArgs []string
 	Match    *regexp.Regexp
 	Delay    time.Duration
+	Recursive    bool
 
 	command *exec.Cmd
 }
@@ -34,6 +35,7 @@ func NewTask(c *Config) (*Task, error) {
 		KillArgs: c.GetKillArgs(),
 		Match:    c.GetMatch(),
 		Delay:    c.GetDelay(),
+		Recursive: c.GetRecursive(),
 	}
 	return task, nil
 }
@@ -46,7 +48,7 @@ func (t *Task) Run(done chan bool) {
 	quit := make(chan bool)
 	event := make(chan *fsnotify.FileEvent)
 
-	startWatch(t.Dir, quit, event)
+	startWatch(t, quit, event)
 
 	var rerunMx sync.Mutex
 	for {
@@ -55,7 +57,7 @@ func (t *Task) Run(done chan bool) {
 			if ev.IsCreate() || ev.IsDelete() || ev.IsRename() {
 				close(quit)
 				quit = make(chan bool)
-				startWatch(t.Dir, quit, event)
+				startWatch(t, quit, event)
 			}
 
 			if !t.Match.MatchString(ev.Name) {

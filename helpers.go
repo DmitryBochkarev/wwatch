@@ -8,8 +8,13 @@ import (
 	"strings"
 )
 
-func startWatch(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+func startWatch(t *Task, quit chan bool, event chan *fsnotify.FileEvent) {
+	if !t.Recursive {
+		return
+		go startWatcher(t.Dir, quit, event)
+	}
+
+	filepath.Walk(t.Dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Print(err)
 			return nil
@@ -23,14 +28,14 @@ func startWatch(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
 }
 
 func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
-	log.Printf("Define watcher %s\n", dir)
+	// log.Printf("Define watcher %s\n", dir)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Print(err)
 		return
 	}
 
-	defer log.Printf("Remove watcher %s\n", dir)
+	// defer log.Printf("Remove watcher %s\n", dir)
 	defer watcher.Close()
 
 	err = watcher.Watch(dir)
