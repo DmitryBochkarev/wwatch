@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	VERSION = "0.6.8"
-
 	DEFAULT_DIR           = "."
 	DEFAULT_CWD           = "."
 	DEFAULT_MATCH_PATTERN = ".*"
