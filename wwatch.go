@@ -16,24 +16,33 @@ import (
 )
 
 const (
-	VERSION = "0.6.5"
+	VERSION               = "0.6.5"
+	DEFAULT_DIR           = "."
+	DEFAULT_CWD           = "."
+	DEFAULT_MATCH_PATTERN = ".*"
+	DEFAULT_DELAY         = time.Duration(100 * time.Millisecond)
 )
 
 var (
-	dir, commandString, matchPattern string
-	cwd, shutdownString              string
-	delay                            time.Duration
-	printVertion                     bool
+	commandLineDir, commandLineCwd, commandLineMatchPattern string
+	commandLineDelay                                        time.Duration
+	commandLineCommand, commandLineKill                     string
+	commandLineConfig                                       string
+	commandLinePrintVersion                                 bool
+
+	config Config
+	tasks  *map[string]*Task
 )
 
 func init() {
-	flag.StringVar(&dir, "dir", ".", "directory to watch")
-	flag.StringVar(&commandString, "cmd", "", "command to run")
-	flag.StringVar(&shutdownString, "kill", "", "command to shutdown process. Example: kill -9 $WWATCH_PID. Default send INT signal.")
-	flag.StringVar(&matchPattern, "match", ".*", "file(fullpath) match regexp")
-	flag.StringVar(&cwd, "cwd", ".", "current working directory")
-	flag.DurationVar(&delay, "delay", time.Duration(100*time.Millisecond), "delay before rerun cmd")
-	flag.BoolVar(&printVertion, "version", false, "print version")
+	flag.StringVar(&commandLineDir, "dir", DEFAULT_DIR, "directory to watch")
+	flag.StringVar(&commandLineCwd, "cwd", DEFAULT_CWD, "current working directory")
+	flag.StringVar(&commandLineMatchPattern, "match", DEFAULT_MATCH_PATTERN, "file(fullpath) match regexp")
+	flag.DurationVar(&commandLineDelay, "delay", DEFAULT_DELAY, "delay before rerun cmd")
+	flag.StringVar(&commandLineCommand, "cmd", "", "command to run")
+	flag.StringVar(&commandLineKill, "kill", "", "command to shutdown process. Example: kill -9 $WWATCH_PID. Default send INT signal.")
+	flag.StringVar(&commandLineConfig, "config", "", "path to configuration file(*.toml)")
+	flag.BoolVar(&commandLinePrintVersion, "version", false, "print version")
 }
 
 func main() {
@@ -45,11 +54,33 @@ func main() {
 		log.Fatalf("version: %s", VERSION)
 	}
 
-	if commandString == "" {
-		log.Fatal("You should specify command(-cmd='cal')")
+	switch {
+	case commandString == "" && configFile == "":
+		log.Fatal("You should specify command or path to configuration file")
+	case commandString != "":
+		config.Dir = dir
+		config.Cwd = cwd
+		config.Match = matchPattern
+		config.Delay = delay
+		cmd, cmdArgs := parseCommandString(commandString)
+		config.Cmd = cmd
+		config.CmdArgs = cmdArgs
+		if shutdownString != "" {
+			kill, killArgs := parseCommandString(commandString)
+			config.Kill = kill
+			config.KillArgs = killArgs
+		}
+	case configFile != "":
+		config.Load(configFile)
 	}
 
-	matchRx, err := regexp.Compile(matchPattern)
+	tasks, err := config.Tasks()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	matchRx, err = regexp.Compile(matchPattern)
 
 	if err != nil {
 		log.Fatal(err)
