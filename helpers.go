@@ -27,7 +27,6 @@ func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
 	}
 
 	go func() {
-		defer watcher.Close()
 		for {
 			select {
 			case ev := <-watcher.Event:
@@ -35,6 +34,7 @@ func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
 			case err := <-watcher.Error:
 				log.Println("watch error: ", err)
 			case <-quit:
+				watcher.Close()
 				return
 			}
 		}
