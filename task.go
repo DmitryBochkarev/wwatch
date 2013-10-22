@@ -25,8 +25,9 @@ type Task struct {
 	Recursive bool
 	DotFiles  bool
 
-	watchersCh chan bool
-	command    *exec.Cmd
+	watchers []*fsnotify.Watcher
+	command  *exec.Cmd
+	mx       sync.Mutex
 }
 
 func NewTask(c *Config) (*Task, error) {
@@ -45,10 +46,15 @@ func NewTask(c *Config) (*Task, error) {
 }
 
 func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
-	t.watchersCh = make(chan bool)
+	t.mx.Lock()
+	defer t.mx.Unlock()
 
 	if !t.Recursive {
-		startWatcher(t.Dir, t.watchersCh, event)
+		watcher, err := startWatcher(t.Dir, event)
+		if err != nil {
+			log.Fatal(err)
+		}
+		t.watchers = append(t.watchers, watcher)
 		return
 	}
 
@@ -66,13 +72,25 @@ func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
 			return filepath.SkipDir
 		}
 
-		startWatcher(path, t.watchersCh, event)
+		watcher, err := startWatcher(path, event)
+		if err != nil {
+			log.Fatal(err)
+		}
+		t.watchers = append(t.watchers, watcher)
 		return nil
 	})
 }
 
 func (t *Task) StopWatch() {
-	close(t.watchersCh)
+	t.mx.Lock()
+	defer t.mx.Unlock()
+
+	watchers := t.watchers
+	t.watchers = []*fsnotify.Watcher{}
+
+	for _, watcher := range watchers {
+		watcher.Close()
+	}
 }
 
 func (t *Task) Run() {
@@ -84,7 +102,6 @@ func (t *Task) Run() {
 
 	t.StartWatch(event)
 
-	var rerunMx sync.Mutex
 	for {
 		select {
 		case ev := <-event:
@@ -109,15 +126,15 @@ func (t *Task) Run() {
 
 			timer = time.After(t.Delay)
 		case <-timer:
-			rerunMx.Lock()
 			t.Stop()
 			t.Exec()
-			rerunMx.Unlock()
 		}
 	}
 }
 
 func (t *Task) Exec() {
+	t.mx.Lock()
+	defer t.mx.Unlock()
 	exe := os.Expand(t.Cmd, os.Getenv)
 
 	var args = make([]string, len(t.CmdArgs))
@@ -135,6 +152,9 @@ func (t *Task) Exec() {
 }
 
 func (t *Task) Stop() {
+	t.mx.Lock()
+	defer t.mx.Unlock()
+
 	if t.command == nil {
 		log.Fatal("Trying to stop not runned process")
 	}

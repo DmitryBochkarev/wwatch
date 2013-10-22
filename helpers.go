@@ -12,34 +12,36 @@ var (
 	dotFileRx = regexp.MustCompile(`^\..*$`)
 )
 
-func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
+func startWatcher(dir string, event chan *fsnotify.FileEvent) (*fsnotify.Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Print(err)
-		return
+		return nil, err
 	}
 
 	err = watcher.Watch(dir)
 
 	if err != nil {
-		log.Print(err)
-		return
+		return nil, err
 	}
 
 	go func() {
 		for {
 			select {
-			case ev := <-watcher.Event:
+			case ev, ok := <-watcher.Event:
+				if !ok {
+					return
+				}
 				event <- ev
-			case err := <-watcher.Error:
+			case err, ok := <-watcher.Error:
+				if !ok {
+					return
+				}
 				log.Println("watch error: ", err)
-			case <-quit:
-				watcher.Close()
-				return
 			}
 		}
 	}()
 
+	return watcher, nil
 }
 
 func parseCommandString(commandString string) (exe string, args []string) {
