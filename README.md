@@ -15,12 +15,14 @@ Usage of wwatch:
   -dir=".": directory to watch
   -kill="": command to shutdown process. Example: kill -9 $WWATCH_PID. Default send INT signal.
   -match=".*": file(fullpath) match regexp
+  -recursive=false: walk recursive over directories
   -version=false: print version
+
 </pre>
 
 ### Example
 
-`wwatch -cmd='go run *.go' -match='.*\.go$'`
+`wwatch -cmd='go install' -match='.*\.go$'`
 
 ## Config files
 
