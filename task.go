@@ -164,6 +164,11 @@ func (t *Task) Stop() {
 		return
 	}
 
+	stopProcess(groupPid, processPid, (t.PidFile != ""), time.Duration(1*time.Second))
+	t.command.Wait()
+}
+
+func stopProcess(groupPid, processPid int, useProcessPid bool, wait time.Duration) {
 	log.Printf("send SIGTERM to process group %d\n", groupPid)
 	group, err := os.FindProcess(groupPid)
 	if err != nil {
@@ -171,20 +176,28 @@ func (t *Task) Stop() {
 	}
 
 	group.Signal(syscall.SIGTERM)
-	group.Wait()
 
-	if t.PidFile != "" {
+	go func() {
+		time.Sleep(wait)
+		group.Kill()
+	}()
+
+	if useProcessPid {
 		proc, err := os.FindProcess(processPid)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Printf("send SIGINT to process pid %d(%s)\n", processPid, t.PidFile)
+		log.Printf("send SIGINT to process pid %d\n", processPid)
 		proc.Signal(os.Interrupt)
+		go func() {
+			time.Sleep(wait)
+			proc.Kill()
+		}()
 		proc.Wait()
 	}
 
-	t.command.Wait()
+	group.Wait()
 }
 
 func (t *Task) Shutdown() {
