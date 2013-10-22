@@ -13,16 +13,16 @@ Usage of wwatch:
   -cwd=".": current working directory
   -delay="100ms": delay before rerun cmd
   -dir=".": directory to watch
-  -kill="": command to shutdown process. Example: kill -9 $WWATCH_PID. Default send INT signal.
+  -ext="": extentions of files to watch: -ext='less,js,coffee'
   -match=".*": file(fullpath) match regexp
+  -pidfile="": file that content pid of running process($WWATCH_PID)
   -recursive=false: walk recursive over directories
   -version=false: print version
-
 </pre>
 
 ### Example
 
-`wwatch -cmd='go install' -match='.*\.go$'`
+`wwatch -cmd='go install' -ext='go'`
 
 ## Config files
 
@@ -35,8 +35,6 @@ dir = "<directory to watch(relative to configuration file or absolute)>"
 cwd = "<working directory for task(relative to configuration file or absolute)>"
 cmd = "<binary name>"
 args = ["<array>", "<of>", "<arguments>"]
-kill = "<binary called for kill task>"
-kill_args = ["<array>", "<of>", "<arguments>", "<passed>", "<to>", "<kill>"]
 match = "<string compiled to regexp>"
 delay = "<string repsented delay before kill/rerun>"
 ```
@@ -48,9 +46,7 @@ dir = "./app/assets/styles"
 cwd = "."
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
-kill = "kill"
-kill_args = ["-9", "$WWATCH_PID"]
-match = ".*\\.less$"
+ext = "less"
 delay = "1s"
 ```
 
@@ -59,9 +55,12 @@ delay = "1s"
 ```toml
 dir = "./app/assets"
 cwd = "."
-kill = "kill"
-kill_args = ["-9", "$WWATCH_PID"]
 delay = "1s"
+
+[run.server]
+cmd = "bash"
+args = ["-c", "go run *.go"]
+pidfile = "tmp/server.pid"
 
 [run.less]
 cmd = "lessc"
@@ -73,3 +72,7 @@ cmd = "uglifyjs"
 args = ["app/assets/javascripts/app.js", "-o", "public/app.min.js"]
 match = ".*\\.js$"
 ```
+
+## Limitation
+
+Currently expand * not supported. But you can write script that run command you need.

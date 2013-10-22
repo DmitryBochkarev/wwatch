@@ -8,15 +8,11 @@ import (
 )
 
 func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
-	// log.Printf("Define watcher %s\n", dir)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Print(err)
 		return
 	}
-
-	// defer log.Printf("Remove watcher %s\n", dir)
-	defer watcher.Close()
 
 	err = watcher.Watch(dir)
 
@@ -25,16 +21,20 @@ func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
 		return
 	}
 
-	for {
-		select {
-		case ev := <-watcher.Event:
-			event <- ev
-		case err := <-watcher.Error:
-			log.Println("watch error: ", err)
-		case <-quit:
-			return
+	go func() {
+		defer watcher.Close()
+		for {
+			select {
+			case ev := <-watcher.Event:
+				event <- ev
+			case err := <-watcher.Error:
+				log.Println("watch error: ", err)
+			case <-quit:
+				return
+			}
 		}
-	}
+	}()
+
 }
 
 func parseCommandString(commandString string) (exe string, args []string) {

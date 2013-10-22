@@ -1,14 +1,16 @@
 package main
 
 import (
-	"path/filepath"
-	"fmt"
 	"github.com/howeyc/fsnotify"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -17,13 +19,13 @@ type Task struct {
 	Cwd       string
 	Cmd       string
 	CmdArgs   []string
-	Kill      string
-	KillArgs  []string
+	PidFile   string
 	Match     *regexp.Regexp
 	Delay     time.Duration
 	Recursive bool
 
-	command *exec.Cmd
+	watchersCh chan bool
+	command    *exec.Cmd
 }
 
 func NewTask(c *Config) (*Task, error) {
@@ -32,8 +34,7 @@ func NewTask(c *Config) (*Task, error) {
 		Cwd:       c.GetCwd(),
 		Cmd:       c.GetCmd(),
 		CmdArgs:   c.GetCmdArgs(),
-		Kill:      c.GetKill(),
-		KillArgs:  c.GetKillArgs(),
+		PidFile:   c.GetPidFile(),
 		Match:     c.GetMatch(),
 		Delay:     c.GetDelay(),
 		Recursive: c.GetRecursive(),
@@ -41,9 +42,11 @@ func NewTask(c *Config) (*Task, error) {
 	return task, nil
 }
 
-func (t *Task) StartWatch(quit chan bool, event chan *fsnotify.FileEvent) {
+func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
+	t.watchersCh = make(chan bool)
+
 	if !t.Recursive {
-		go startWatcher(t.Dir, quit, event)
+		startWatcher(t.Dir, t.watchersCh, event)
 		return
 	}
 
@@ -55,29 +58,31 @@ func (t *Task) StartWatch(quit chan bool, event chan *fsnotify.FileEvent) {
 		if !info.IsDir() {
 			return nil
 		}
-		go startWatcher(path, quit, event)
+		startWatcher(path, t.watchersCh, event)
 		return nil
 	})
 }
 
-func (t *Task) Run(done chan bool) {
+func (t *Task) StopWatch() {
+	close(t.watchersCh)
+}
+
+func (t *Task) Run() {
 	t.Exec()
 
 	var timer <-chan time.Time
 
-	quit := make(chan bool)
 	event := make(chan *fsnotify.FileEvent)
 
-	t.StartWatch(quit, event)
+	t.StartWatch(event)
 
 	var rerunMx sync.Mutex
 	for {
 		select {
 		case ev := <-event:
 			if ev.IsCreate() || ev.IsDelete() || ev.IsRename() {
-				close(quit)
-				quit = make(chan bool)
-				t.StartWatch(quit, event)
+				t.StopWatch()
+				t.StartWatch(event)
 			}
 
 			if !t.Match.MatchString(ev.Name) {
@@ -95,9 +100,6 @@ func (t *Task) Run(done chan bool) {
 			t.Stop()
 			t.Exec()
 			rerunMx.Unlock()
-		case <-done:
-			t.Stop()
-			return
 		}
 	}
 }
@@ -110,7 +112,6 @@ func (t *Task) Exec() {
 		args[i] = os.Expand(arg, os.Getenv)
 	}
 
-	log.Println(t.Cwd)
 	log.Printf("run %s %v\n", exe, args)
 	t.command = exec.Command(exe, args...)
 	t.command.Dir = t.Cwd
@@ -125,36 +126,55 @@ func (t *Task) Stop() {
 		log.Fatal("Trying to stop not runned process")
 	}
 
+	log.Println("stop")
+
 	if t.command.ProcessState != nil && t.command.ProcessState.Exited() {
 		return
 	}
 
-	if t.Kill == "" {
-		if t.command.ProcessState == nil {
-			t.command.Process.Signal(os.Interrupt)
+	processPid := t.command.Process.Pid
+	groupPid := -1 * processPid
+
+	if t.PidFile != "" {
+		pidBites, err := ioutil.ReadFile(t.PidFile)
+		if err != nil {
+			log.Fatalf("error while reading pid file(%s): %q", t.PidFile, err)
 		}
-		t.command.Wait()
+		processPid, err = strconv.Atoi(string(pidBites))
+		if err != nil {
+			log.Fatalf("error while parsing pid file(%s): %q", t.PidFile, err)
+		}
+
+	}
+
+	if t.command.ProcessState != nil {
 		return
 	}
 
-	exe := os.Expand(t.Kill, os.Getenv)
-
-	var args = make([]string, len(t.KillArgs))
-	for i, arg := range t.KillArgs {
-		args[i] = os.Expand(arg, func(key string) string {
-			if key == "WWATCH_PID" {
-				return fmt.Sprintf("%d", t.command.Process.Pid)
-			}
-			return os.Getenv(key)
-		})
+	log.Printf("send SIGTERM to process group %d\n", groupPid)
+	group, err := os.FindProcess(groupPid)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	log.Printf("run %s %v\n", exe, args)
-	cmdKill := exec.Command(exe, args...)
-	cmdKill.Dir = t.Cwd
-	cmdKill.Stdout = os.Stdout
-	cmdKill.Stderr = os.Stderr
-	cmdKill.Run()
+	group.Signal(syscall.SIGTERM)
+	group.Wait()
+
+	if t.PidFile != "" {
+		proc, err := os.FindProcess(processPid)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("send SIGINT to process pid %d(%s)\n", processPid, t.PidFile)
+		proc.Signal(os.Interrupt)
+		proc.Wait()
+	}
 
 	t.command.Wait()
+}
+
+func (t *Task) Shutdown() {
+	t.StopWatch()
+	t.Stop()
 }

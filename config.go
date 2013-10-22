@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -17,9 +18,9 @@ type Config struct {
 	Cwd       string   `toml:"cwd"`
 	Cmd       string   `toml:"cmd"`
 	CmdArgs   []string `toml:"args"`
-	Kill      string   `toml:"kill"`
-	KillArgs  []string `toml:"kill_args"`
+	PidFile   string   `toml:"pidfile"`
 	Match     string   `toml:"match"`
+	Ext       string   `toml:"ext"`
 	Delay     string   `toml:"delay"`
 	Recursive *bool    `toml:"recursive"`
 
@@ -55,6 +56,15 @@ func (c *Config) GetConfigPath() string {
 	}
 }
 
+func (c *Config) ResolveFilepath(relativePath string) string {
+	path := relativePath
+	if configPath := c.GetConfigPath(); configPath != "" {
+		path = resolvePath(configPath, path)
+	}
+
+	return path
+}
+
 func (c *Config) GetDir() string {
 	var dir string
 	switch {
@@ -66,9 +76,7 @@ func (c *Config) GetDir() string {
 		dir = DEFAULT_DIR
 	}
 
-	if configPath := c.GetConfigPath(); configPath != "" {
-		dir = resolvePath(configPath, dir)
-	}
+	dir = c.ResolveFilepath(dir)
 
 	return dir
 }
@@ -84,9 +92,7 @@ func (c *Config) GetCwd() string {
 		dir = DEFAULT_CWD
 	}
 
-	if configPath := c.GetConfigPath(); configPath != "" {
-		dir = resolvePath(configPath, dir)
-	}
+	dir = c.ResolveFilepath(dir)
 
 	return dir
 }
@@ -99,32 +105,25 @@ func (c *Config) GetCmdArgs() []string {
 	return c.CmdArgs
 }
 
-func (c *Config) GetKill() string {
-	switch {
-	case c.Kill != "":
-		return c.Kill
-	case c.parent != nil:
-		return c.parent.GetKill()
-	default:
-		return ""
+func (c *Config) GetPidFile() string {
+	if c.PidFile != "" {
+		return c.ResolveFilepath(c.PidFile)
 	}
-}
-
-func (c *Config) GetKillArgs() []string {
-	switch {
-	case len(c.KillArgs) > 0:
-		return c.KillArgs
-	case c.parent != nil:
-		return c.parent.GetKillArgs()
-	default:
-		return c.KillArgs
-	}
+	return ""
 }
 
 func (c *Config) GetMatch() *regexp.Regexp {
+	match := c.Match
+
+	if ext := c.GetExt(); ext != "" {
+		ext = strings.Replace(ext, " ", "", -1)
+		ext = strings.Replace(ext, ",", "|", -1)
+		match = fmt.Sprintf(".*\\.(%s)$", ext)
+	}
+
 	switch {
-	case c.Match != "":
-		rx, err := regexp.Compile(c.Match)
+	case match != "":
+		rx, err := regexp.Compile(match)
 		if err != nil {
 			panic(err)
 		}
@@ -133,6 +132,17 @@ func (c *Config) GetMatch() *regexp.Regexp {
 		return c.parent.GetMatch()
 	default:
 		return regexp.MustCompile(DEFAULT_MATCH_PATTERN)
+	}
+}
+
+func (c *Config) GetExt() string {
+	switch {
+	case c.Ext != "":
+		return c.Ext
+	case c.parent != nil:
+		return c.parent.GetExt()
+	default:
+		return ""
 	}
 }
 
@@ -190,9 +200,4 @@ func (c *Config) Tasks() (*map[string]*Task, error) {
 		return nil, errors.New("Task not found")
 	}
 	return &tasks, nil
-}
-
-func (c Config) String() string {
-	return fmt.Sprintf("dir: %s, cwd: %s, cmd: %s, cmdArgs: %q, kill: %s, match: %s, delay: %s",
-		c.GetDir(), c.GetCwd(), c.GetCmd(), c.GetCmdArgs(), c.GetKill(), c.GetMatch(), c.GetDelay())
 }
