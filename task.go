@@ -44,12 +44,7 @@ func NewTask(c *Config) (*Task, error) {
 	return task, nil
 }
 
-var (
-	dotFileRx = regexp.MustCompile(`^\..*$`)
-)
-
 func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
-
 	t.watchersCh = make(chan bool)
 
 	if !t.Recursive {
@@ -67,7 +62,7 @@ func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
 			return nil
 		}
 
-		if path != "." && !t.DotFiles && dotFileRx.MatchString(filepath.Base(path)) {
+		if path != "." && !t.DotFiles && isDotfile(path) {
 			return filepath.SkipDir
 		}
 
@@ -98,11 +93,16 @@ func (t *Task) Run() {
 				t.StartWatch(event)
 			}
 
+			if !t.DotFiles && isDotfile(ev.Name) {
+				break
+			}
+
 			if !t.Match.MatchString(ev.Name) {
 				break
 			}
 
 			log.Printf("File changed(%s)", ev.String())
+
 			if t.Delay >= time.Duration(500*time.Millisecond) {
 				log.Printf("wait %s before rerun...\n", t.Delay)
 			}

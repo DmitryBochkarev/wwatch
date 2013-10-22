@@ -4,7 +4,12 @@ import (
 	"github.com/howeyc/fsnotify"
 	"log"
 	"path/filepath"
+	"regexp"
 	"strings"
+)
+
+var (
+	dotFileRx = regexp.MustCompile(`^\..*$`)
 )
 
 func startWatcher(dir string, quit chan bool, event chan *fsnotify.FileEvent) {
@@ -56,4 +61,8 @@ func resolvePath(start string, parts ...string) (path string) {
 		path = filepath.Join(path, part)
 	}
 	return
+}
+
+func isDotfile(path string) bool {
+	return dotFileRx.MatchString(filepath.Base(path))
 }
