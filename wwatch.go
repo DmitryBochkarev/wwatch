@@ -34,7 +34,7 @@ func init() {
 	flag.StringVar(&commandLineExt, "ext", "", "extentions of files to watch: -ext='less,js,coffee'")
 	flag.StringVar(&commandLineDelay, "delay", DEFAULT_DELAY, "delay before rerun cmd")
 	flag.StringVar(&commandLineCommand, "cmd", "", "command to run")
-	flag.StringVar(&commandLinePidFile, "pidfile", "", "file that content pid of running process($WWATCH_PID)")
+	flag.StringVar(&commandLinePidFile, "pidfile", "", "file that content pid of running process")
 	flag.StringVar(&commandLineConfig, "config", "", "path to configuration file(*.toml)")
 	flag.BoolVar(&commandLineRecursive, "recursive", DEFAULT_RECURSIVE, "walk recursive over directories")
 	flag.BoolVar(&commandLineDotFiles, "dotfiles", DEFAULT_DOTFILES, "watch on dotfiles")

@@ -16,7 +16,7 @@ Usage of wwatch:
   -dotfiles=false: watch on dotfiles
   -ext="": extentions of files to watch: -ext='less,js,coffee'
   -match=".*": file(fullpath) match regexp
-  -pidfile="": file that content pid of running process($WWATCH_PID)
+  -pidfile="": file that content pid of running process
   -recursive=false: walk recursive over directories
   -version=false: print version
 </pre>
