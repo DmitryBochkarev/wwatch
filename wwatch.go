@@ -13,6 +13,7 @@ const (
 	DEFAULT_MATCH_PATTERN = ".*"
 	DEFAULT_DELAY         = "100ms"
 	DEFAULT_RECURSIVE     = false
+	DEFAULT_DOTFILES      = false
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 	commandLineDelay                                                        string
 	commandLineCommand, commandLinePidFile                                  string
 	commandLineConfig                                                       string
-	commandLineRecursive, commandLinePrintVersion                           bool
+	commandLineRecursive, commandLineDotFiles, commandLinePrintVersion      bool
 
 	config Config
 	tasks  *map[string]*Task
@@ -36,6 +37,7 @@ func init() {
 	flag.StringVar(&commandLinePidFile, "pidfile", "", "file that content pid of running process($WWATCH_PID)")
 	flag.StringVar(&commandLineConfig, "config", "", "path to configuration file(*.toml)")
 	flag.BoolVar(&commandLineRecursive, "recursive", DEFAULT_RECURSIVE, "walk recursive over directories")
+	flag.BoolVar(&commandLineDotFiles, "dotfiles", DEFAULT_DOTFILES, "watch on dotfiles")
 	flag.BoolVar(&commandLinePrintVersion, "version", false, "print version")
 }
 
@@ -58,6 +60,7 @@ func main() {
 		config.Ext = commandLineExt
 		config.Delay = commandLineDelay
 		config.Recursive = &commandLineRecursive
+		config.DotFiles = &commandLineDotFiles
 		cmd, cmdArgs := parseCommandString(commandLineCommand)
 		config.Cmd = cmd
 		config.CmdArgs = cmdArgs

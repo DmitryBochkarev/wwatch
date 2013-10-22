@@ -23,6 +23,7 @@ type Task struct {
 	Match     *regexp.Regexp
 	Delay     time.Duration
 	Recursive bool
+	DotFiles  bool
 
 	watchersCh chan bool
 	command    *exec.Cmd
@@ -38,11 +39,17 @@ func NewTask(c *Config) (*Task, error) {
 		Match:     c.GetMatch(),
 		Delay:     c.GetDelay(),
 		Recursive: c.GetRecursive(),
+		DotFiles:  c.GetDotFiles(),
 	}
 	return task, nil
 }
 
+var (
+	dotFileRx = regexp.MustCompile(`^\..*$`)
+)
+
 func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
+
 	t.watchersCh = make(chan bool)
 
 	if !t.Recursive {
@@ -55,9 +62,15 @@ func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
 			log.Print(err)
 			return nil
 		}
+
 		if !info.IsDir() {
 			return nil
 		}
+
+		if path != "." && !t.DotFiles && dotFileRx.MatchString(filepath.Base(path)) {
+			return filepath.SkipDir
+		}
+
 		startWatcher(path, t.watchersCh, event)
 		return nil
 	})

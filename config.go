@@ -23,6 +23,7 @@ type Config struct {
 	Ext       string   `toml:"ext"`
 	Delay     string   `toml:"delay"`
 	Recursive *bool    `toml:"recursive"`
+	DotFiles  *bool    `toml:"dotfiles"`
 
 	Run map[string]Config
 
@@ -173,6 +174,17 @@ func (c *Config) GetRecursive() bool {
 		return c.parent.GetRecursive()
 	default:
 		return DEFAULT_RECURSIVE
+	}
+}
+
+func (c *Config) GetDotFiles() bool {
+	switch {
+	case c.DotFiles != nil:
+		return *c.DotFiles
+	case c.parent != nil:
+		return c.parent.GetDotFiles()
+	default:
+		return DEFAULT_DOTFILES
 	}
 }
 
