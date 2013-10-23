@@ -83,17 +83,24 @@ func main() {
 
 		config.PidFile = commandLinePidFile
 	case commandLineConfig != "":
+		config.Load(commandLineConfig)
+
 		configDir, err := filepath.Abs(filepath.Dir(commandLineConfig))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Printf("change working directory to %s", configDir)
-		if err := os.Chdir(configDir); err != nil {
+		cwd, err := os.Getwd()
+		if err != nil {
 			log.Fatal(err)
 		}
-
-		config.Load(commandLineConfig)
+		if configDir != cwd {
+			log.Printf("change working directory to %s", configDir)
+			err = os.Chdir(configDir)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	tasks, err := config.Tasks(outletFactory)
