@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 )
 
@@ -14,14 +15,16 @@ const (
 	DEFAULT_DELAY         = "100ms"
 	DEFAULT_RECURSIVE     = false
 	DEFAULT_DOTFILES      = false
+	DEFAULT_AFTER_CHANGE  = false
 )
 
 var (
 	commandLineDir, commandLineCwd, commandLineMatchPattern, commandLineExt, commandLineIgnorePattern string
-	commandLineDelay                                                        string
-	commandLineCommand, commandLinePidFile                                  string
-	commandLineConfig                                                       string
-	commandLineRecursive, commandLineDotFiles, commandLinePrintVersion      bool
+	commandLineAfterChange                                                                            bool
+	commandLineDelay                                                                                  string
+	commandLineCommand, commandLineOnStartCommand, commandLinePidFile                                 string
+	commandLineConfig                                                                                 string
+	commandLineRecursive, commandLineDotFiles, commandLinePrintVersion                                bool
 
 	config Config
 	tasks  *map[string]*Task
@@ -33,8 +36,10 @@ func init() {
 	flag.StringVar(&commandLineMatchPattern, "match", DEFAULT_MATCH_PATTERN, "file(fullpath) match regexp")
 	flag.StringVar(&commandLineExt, "ext", "", "extentions of files to watch: -ext='less,js,coffee'")
 	flag.StringVar(&commandLineIgnorePattern, "ignore", "", "regexp patter for ignore watch")
+	flag.BoolVar(&commandLineAfterChange, "after", DEFAULT_AFTER_CHANGE, "run command only after files changed")
 	flag.StringVar(&commandLineDelay, "delay", DEFAULT_DELAY, "delay before rerun cmd")
-	flag.StringVar(&commandLineCommand, "cmd", "", "command to run")
+	flag.StringVar(&commandLineCommand, "cmd", "", "command to run, rerun on file changed")
+	flag.StringVar(&commandLineOnStartCommand, "onstart", "", "command to run on start")
 	flag.StringVar(&commandLinePidFile, "pidfile", "", "file that content pid of running process")
 	flag.StringVar(&commandLineConfig, "config", "", "path to configuration file(*.toml)")
 	flag.BoolVar(&commandLineRecursive, "recursive", DEFAULT_RECURSIVE, "walk recursive over directories")
@@ -59,12 +64,19 @@ func main() {
 		config.Cwd = commandLineCwd
 		config.Match = commandLineMatchPattern
 		config.Ext = commandLineExt
+		config.After = &commandLineAfterChange
 		config.Delay = commandLineDelay
 		config.Recursive = &commandLineRecursive
 		config.DotFiles = &commandLineDotFiles
+
+		onStartCmd, onStartCmdArgs := parseCommandString(commandLineOnStartCommand)
+		config.OnStartCmd = onStartCmd
+		config.OnStartCmdArgs = onStartCmdArgs
+
 		cmd, cmdArgs := parseCommandString(commandLineCommand)
 		config.Cmd = cmd
 		config.CmdArgs = cmdArgs
+
 		config.PidFile = commandLinePidFile
 	case commandLineConfig != "":
 		config.Load(commandLineConfig)
@@ -76,13 +88,27 @@ func main() {
 		log.Fatal(err)
 	}
 
-	done := make(chan os.Signal, 1)
+	if _, mainSection := (*tasks)[".default"]; config.OnStartCmd != "" && !mainSection {
+		exe := os.Expand(config.OnStartCmd, os.Getenv)
+		var args = make([]string, len(config.OnStartCmdArgs))
+		for i, arg := range config.OnStartCmdArgs {
+			args[i] = os.Expand(arg, os.Getenv)
+		}
 
-	signal.Notify(done, os.Interrupt, os.Kill)
+		log.Printf("run main onstart command %s %v\n", exe, args)
+		command := exec.Command(exe, args...)
+		command.Dir = config.Cwd
+		command.Stdout = os.Stdout
+		command.Stderr = os.Stderr
+		command.Run()
+	}
 
 	for _, task := range *tasks {
 		go task.Run()
 	}
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, os.Kill)
 
 	for {
 		select {

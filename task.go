@@ -15,16 +15,19 @@ import (
 )
 
 type Task struct {
-	Dir       string
-	Cwd       string
-	Cmd       string
-	CmdArgs   []string
-	PidFile   string
-	Match     *regexp.Regexp
-	Ignore    *regexp.Regexp
-	Delay     time.Duration
-	Recursive bool
-	DotFiles  bool
+	Dir            string
+	Cwd            string
+	Cmd            string
+	CmdArgs        []string
+	OnStartCmd     string
+	OnStartCmdArgs []string
+	PidFile        string
+	Match          *regexp.Regexp
+	Ignore         *regexp.Regexp
+	After          bool
+	Delay          time.Duration
+	Recursive      bool
+	DotFiles       bool
 
 	watchers []*fsnotify.Watcher
 	command  *exec.Cmd
@@ -33,16 +36,19 @@ type Task struct {
 
 func NewTask(c *Config) (*Task, error) {
 	task := &Task{
-		Dir:       c.GetDir(),
-		Cwd:       c.GetCwd(),
-		Cmd:       c.GetCmd(),
-		CmdArgs:   c.GetCmdArgs(),
-		PidFile:   c.GetPidFile(),
-		Match:     c.GetMatch(),
-		Ignore:    c.GetIgnore(),
-		Delay:     c.GetDelay(),
-		Recursive: c.GetRecursive(),
-		DotFiles:  c.GetDotFiles(),
+		Dir:            c.GetDir(),
+		Cwd:            c.GetCwd(),
+		Cmd:            c.GetCmd(),
+		CmdArgs:        c.GetCmdArgs(),
+		OnStartCmd:     c.GetOnStartCmd(),
+		OnStartCmdArgs: c.GetOnStartCmdArgs(),
+		PidFile:        c.GetPidFile(),
+		Match:          c.GetMatch(),
+		Ignore:         c.GetIgnore(),
+		After:          c.GetAfter(),
+		Delay:          c.GetDelay(),
+		Recursive:      c.GetRecursive(),
+		DotFiles:       c.GetDotFiles(),
 	}
 	return task, nil
 }
@@ -100,14 +106,29 @@ func (t *Task) StopWatch() {
 }
 
 func (t *Task) Run() {
-	t.Exec()
+	if t.OnStartCmd != "" {
+		exe := os.Expand(t.OnStartCmd, os.Getenv)
+		var args = make([]string, len(t.OnStartCmdArgs))
+		for i, arg := range t.OnStartCmdArgs {
+			args[i] = os.Expand(arg, os.Getenv)
+		}
 
-	var timer <-chan time.Time
+		log.Printf("run onstart command %s %v\n", exe, args)
+		command := exec.Command(exe, args...)
+		command.Dir = t.Cwd
+		command.Stdout = os.Stdout
+		command.Stderr = os.Stderr
+		command.Run()
+	}
+
+	if !t.After {
+		t.Exec()
+	}
 
 	event := make(chan *fsnotify.FileEvent)
-
 	t.StartWatch(event)
 
+	var timer <-chan time.Time
 	for {
 		select {
 		case ev := <-event:
@@ -163,7 +184,7 @@ func (t *Task) Stop() {
 	defer t.mx.Unlock()
 
 	if t.command == nil {
-		log.Fatal("Trying to stop not runned process")
+		return
 	}
 
 	log.Println("stop")

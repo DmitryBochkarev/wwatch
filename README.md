@@ -8,7 +8,8 @@
 $ wwatch -h
 
 Usage of wwatch:
-  -cmd="": command to run
+  -after=false: run command only after files changed
+  -cmd="": command to run, rerun on file changed
   -config="": path to configuration file(*.toml)
   -cwd=".": current working directory
   -delay="100ms": delay before rerun cmd
@@ -17,6 +18,7 @@ Usage of wwatch:
   -ext="": extentions of files to watch: -ext='less,js,coffee'
   -ignore="": regexp patter for ignore watch
   -match=".*": file(fullpath) match regexp
+  -onstart="": command to run on start
   -pidfile="": file that content pid of running process
   -recursive=false: walk recursive over directories
   -version=false: print version
@@ -33,7 +35,7 @@ wwatch supports configuration files in [toml](https://github.com/mojombo/toml) f
 ### Example of single task
 
 ```toml
-cwd = "."
+cwd = "." #relative to config file
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
 ext = "less"
@@ -46,6 +48,8 @@ delay = "1s"
 cwd = "."
 delay = "1s"
 ignore = "^~.*$" #vim files
+before = "bash"
+before_args = ["-c", "rm -rf ./tmp/*"]
 
 [run.server]
 ext = "go"

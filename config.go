@@ -14,17 +14,20 @@ import (
 )
 
 type Config struct {
-	Dir       string   `toml:"dir"`
-	Cwd       string   `toml:"cwd"`
-	Cmd       string   `toml:"cmd"`
-	CmdArgs   []string `toml:"args"`
-	PidFile   string   `toml:"pidfile"`
-	Match     string   `toml:"match"`
-	Ext       string   `toml:"ext"`
-	Ignore       string   `toml:"ignore"`
-	Delay     string   `toml:"delay"`
-	Recursive *bool    `toml:"recursive"`
-	DotFiles  *bool    `toml:"dotfiles"`
+	Dir            string   `toml:"dir"`
+	Cwd            string   `toml:"cwd"`
+	Cmd            string   `toml:"cmd"`
+	CmdArgs        []string `toml:"args"`
+	OnStartCmd     string   `toml:"onstart"`
+	OnStartCmdArgs []string `toml:"onstart_args"`
+	PidFile        string   `toml:"pidfile"`
+	Match          string   `toml:"match"`
+	Ext            string   `toml:"ext"`
+	Ignore         string   `toml:"ignore"`
+	After          *bool    `toml:"after"`
+	Delay          string   `toml:"delay"`
+	Recursive      *bool    `toml:"recursive"`
+	DotFiles       *bool    `toml:"dotfiles"`
 
 	Run map[string]Config
 
@@ -107,6 +110,14 @@ func (c *Config) GetCmdArgs() []string {
 	return c.CmdArgs
 }
 
+func (c *Config) GetOnStartCmd() string {
+	return c.OnStartCmd
+}
+
+func (c *Config) GetOnStartCmdArgs() []string {
+	return c.OnStartCmdArgs
+}
+
 func (c *Config) GetPidFile() string {
 	if c.PidFile != "" {
 		return c.ResolveFilepath(c.PidFile)
@@ -159,7 +170,18 @@ func (c *Config) GetIgnore() *regexp.Regexp {
 	case c.parent != nil:
 		return c.parent.GetIgnore()
 	default:
-		return regexp.MustCompile("")
+		return regexp.MustCompile("^$")
+	}
+}
+
+func (c *Config) GetAfter() bool {
+	switch {
+	case c.After != nil:
+		return *c.After
+	case c.parent != nil:
+		return c.parent.GetAfter()
+	default:
+		return DEFAULT_AFTER_CHANGE
 	}
 }
 
@@ -214,7 +236,7 @@ func (c *Config) Tasks() (*map[string]*Task, error) {
 		if err != nil {
 			panic(err)
 		}
-		tasks["default"] = task
+		tasks[".default"] = task
 	case len(c.Run) > 0:
 		for name, run := range c.Run {
 			run.parent = c
