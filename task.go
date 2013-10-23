@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -99,7 +100,7 @@ func (t *Task) Run() {
 			args[i] = os.Expand(arg, os.Getenv)
 		}
 
-		log.Printf("%s run onstart command %s %v\n", t.name, exe, args)
+		log.Printf("%s run onstart command %s %v\n", t.name, exe, strings.Join(args, " "))
 		command := exec.Command(exe, args...)
 		command.Dir = t.Cwd
 		command.Stdout = t.Stdout
@@ -163,7 +164,7 @@ func (t *Task) Exec() {
 		args[i] = os.Expand(arg, os.Getenv)
 	}
 
-	log.Printf("%s run: %s %v", t.name, exe, args)
+	log.Printf("%s run: %s %v", t.name, exe, strings.Join(args, " "))
 	t.command = exec.Command(exe, args...)
 	t.command.Dir = t.Cwd
 	t.command.Stdout = t.Stdout

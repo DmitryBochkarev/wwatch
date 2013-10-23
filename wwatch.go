@@ -108,7 +108,7 @@ func main() {
 			args[i] = os.Expand(arg, os.Getenv)
 		}
 
-		log.Printf("run main onstart command %s %v\n", exe, args)
+		log.Printf("run main onstart command %s %v\n", exe, strings.Join(args, " "))
 		command := exec.Command(exe, args...)
 		command.Dir = config.Cwd
 		command.Stdout = outletFactory
