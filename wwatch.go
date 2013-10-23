@@ -101,7 +101,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, mainSection := (*tasks)[".default"]; config.OnStartCmd != "" && !mainSection {
+	if _, mainSection := (*tasks)[""]; config.OnStartCmd != "" && !mainSection {
 		exe := os.Expand(config.OnStartCmd, os.Getenv)
 		var args = make([]string, len(config.OnStartCmdArgs))
 		for i, arg := range config.OnStartCmdArgs {
