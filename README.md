@@ -38,7 +38,7 @@ wwatch supports configuration files in [toml](https://github.com/mojombo/toml) f
 cwd = "." #relative to config file
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
-ext = "less"
+ext = ["less"]
 delay = "1s"
 ```
 
@@ -61,11 +61,11 @@ pidfile = "tmp/server.pid"
 dir = "./app/assets/styles"
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
-match = ".*\\.less$" #same as ext="less"
+match = ".*\\.less$" #same as ext=["less"]
 
 [run.uglifyjs]
 dir = "./app/assets/javascripts"
 cmd = "uglifyjs"
 args = ["app/assets/javascripts/app.js", "-o", "public/app.min.js"]
-ext = "js"
+ext = ["js"]
 ```

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -64,7 +65,8 @@ func main() {
 		config.Dir = commandLineDir
 		config.Cwd = commandLineCwd
 		config.Match = commandLineMatchPattern
-		config.Ext = commandLineExt
+
+		config.Ext = strings.Split(strings.Replace(commandLineExt, " ", "", -1), ",")
 		config.After = &commandLineAfterChange
 		config.Delay = commandLineDelay
 		config.Recursive = &commandLineRecursive

@@ -20,7 +20,7 @@ type Config struct {
 	OnStartCmdArgs []string `toml:"onstart_args"`
 	PidFile        string   `toml:"pidfile"`
 	Match          string   `toml:"match"`
-	Ext            string   `toml:"ext"`
+	Ext            []string `toml:"ext"`
 	Ignore         string   `toml:"ignore"`
 	After          *bool    `toml:"after"`
 	Delay          string   `toml:"delay"`
@@ -87,10 +87,8 @@ func (c *Config) GetPidFile() string {
 func (c *Config) GetMatch() *regexp.Regexp {
 	match := c.Match
 
-	if ext := c.GetExt(); ext != "" {
-		ext = strings.Replace(ext, " ", "", -1)
-		ext = strings.Replace(ext, ",", "|", -1)
-		match = fmt.Sprintf(".*\\.(%s)$", ext)
+	if ext := c.GetExt(); len(ext)>0 {
+		match = fmt.Sprintf(".*\\.(%s)$", strings.Join(ext, "|"))
 	}
 
 	switch {
@@ -107,14 +105,14 @@ func (c *Config) GetMatch() *regexp.Regexp {
 	}
 }
 
-func (c *Config) GetExt() string {
+func (c *Config) GetExt() []string {
 	switch {
-	case c.Ext != "":
+	case len(c.Ext) > 0:
 		return c.Ext
 	case c.parent != nil:
 		return c.parent.GetExt()
 	default:
-		return ""
+		return []string{}
 	}
 }
 
