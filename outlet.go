@@ -53,6 +53,7 @@ var colors = []ct.Color{
 func NewOutletFactory() (of *OutletFactory) {
 	of = new(OutletFactory)
 	of.Outlets = make(map[string]*Outlet)
+	of.Padding = len("wwatch")
 	return
 }
 
