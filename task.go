@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/howeyc/fsnotify"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,28 +30,12 @@ type Task struct {
 	Recursive      bool
 	DotFiles       bool
 
+	Stdout io.Writer
+	Stderr io.Writer
+
 	watchers []*fsnotify.Watcher
 	command  *exec.Cmd
 	mx       sync.Mutex
-}
-
-func NewTask(c *Config) (*Task, error) {
-	task := &Task{
-		Dir:            c.GetDir(),
-		Cwd:            c.GetCwd(),
-		Cmd:            c.GetCmd(),
-		CmdArgs:        c.GetCmdArgs(),
-		OnStartCmd:     c.GetOnStartCmd(),
-		OnStartCmdArgs: c.GetOnStartCmdArgs(),
-		PidFile:        c.GetPidFile(),
-		Match:          c.GetMatch(),
-		Ignore:         c.GetIgnore(),
-		After:          c.GetAfter(),
-		Delay:          c.GetDelay(),
-		Recursive:      c.GetRecursive(),
-		DotFiles:       c.GetDotFiles(),
-	}
-	return task, nil
 }
 
 func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
@@ -116,8 +101,8 @@ func (t *Task) Run() {
 		log.Printf("run onstart command %s %v\n", exe, args)
 		command := exec.Command(exe, args...)
 		command.Dir = t.Cwd
-		command.Stdout = os.Stdout
-		command.Stderr = os.Stderr
+		command.Stdout = t.Stdout
+		command.Stderr = t.Stderr
 		command.Run()
 	}
 
@@ -170,15 +155,15 @@ func (t *Task) Exec() {
 		args[i] = os.Expand(arg, os.Getenv)
 	}
 
-	log.Printf("run: %s %v\n", exe, args)
+	log.Printf("run: %s %v", exe, args)
 	t.command = exec.Command(exe, args...)
 	t.command.Dir = t.Cwd
-	t.command.Stdout = os.Stdout
-	t.command.Stderr = os.Stderr
+	t.command.Stdout = t.Stdout
+	t.command.Stderr = t.Stderr
 	t.command.Start()
 	go func() {
 		t.command.Wait()
-		log.Printf("command exited: %s %v\n", exe, args)
+		log.Printf("pocess exited: %s %v", exe, args)
 	}()
 }
 
@@ -189,8 +174,6 @@ func (t *Task) Stop() {
 	if t.command == nil {
 		return
 	}
-
-	log.Println("stop")
 
 	if t.command.ProcessState != nil && t.command.ProcessState.Exited() {
 		return
@@ -220,7 +203,7 @@ func (t *Task) Stop() {
 }
 
 func stopProcess(groupPid, processPid int, useProcessPid bool, wait time.Duration) {
-	log.Printf("send SIGTERM to process group %d\n", groupPid)
+	log.Printf("send SIGTERM to process group %d", groupPid)
 	group, err := os.FindProcess(groupPid)
 	if err != nil {
 		log.Fatal(err)
@@ -239,7 +222,7 @@ func stopProcess(groupPid, processPid int, useProcessPid bool, wait time.Duratio
 			log.Fatal(err)
 		}
 
-		log.Printf("send SIGINT to process pid %d\n", processPid)
+		log.Printf("send SIGINT to process pid %d", processPid)
 		proc.Signal(os.Interrupt)
 		go func() {
 			time.Sleep(wait)

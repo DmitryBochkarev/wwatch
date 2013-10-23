@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -28,8 +29,9 @@ var (
 	commandLineConfig                                                                                 string
 	commandLineRecursive, commandLineDotFiles, commandLinePrintVersion                                bool
 
-	config Config
-	tasks  *map[string]*Task
+	config        Config
+	tasks         *map[string]*Task
+	outletFactory = NewOutletFactory()
 )
 
 func init() {
@@ -52,15 +54,14 @@ func init() {
 func main() {
 	flag.Parse()
 
-	log.SetPrefix("wwatch ")
-
+	log.SetOutput(outletFactory)
 	if commandLinePrintVersion {
 		log.Fatalf("version: %s", VERSION)
 	}
 
 	switch {
 	case commandLineCommand == "" && commandLineConfig == "":
-		log.Fatal("You should specify command or path to configuration file")
+		log.Fatal(errors.New("You should specify command or path to configuration file"))
 	case commandLineCommand != "":
 		config.Dir = commandLineDir
 		config.Cwd = commandLineCwd
@@ -95,7 +96,7 @@ func main() {
 		config.Load(commandLineConfig)
 	}
 
-	tasks, err := config.Tasks()
+	tasks, err := config.Tasks(outletFactory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,8 +111,8 @@ func main() {
 		log.Printf("run main onstart command %s %v\n", exe, args)
 		command := exec.Command(exe, args...)
 		command.Dir = config.Cwd
-		command.Stdout = os.Stdout
-		command.Stderr = os.Stderr
+		command.Stdout = outletFactory
+		command.Stderr = outletFactory
 		command.Run()
 	}
 

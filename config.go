@@ -42,6 +42,58 @@ func (c *Config) Load(file string) {
 	}
 }
 
+func (c *Config) CreateTask() (*Task, error) {
+	task := &Task{
+		Dir:            c.GetDir(),
+		Cwd:            c.GetCwd(),
+		Cmd:            c.GetCmd(),
+		CmdArgs:        c.GetCmdArgs(),
+		OnStartCmd:     c.GetOnStartCmd(),
+		OnStartCmdArgs: c.GetOnStartCmdArgs(),
+		PidFile:        c.GetPidFile(),
+		Match:          c.GetMatch(),
+		Ignore:         c.GetIgnore(),
+		After:          c.GetAfter(),
+		Delay:          c.GetDelay(),
+		Recursive:      c.GetRecursive(),
+		DotFiles:       c.GetDotFiles(),
+	}
+	return task, nil
+}
+
+func (c *Config) Tasks(of *OutletFactory) (*map[string]*Task, error) {
+	tasks := make(map[string]*Task)
+	switch {
+	case c.GetCmd() != "" && len(c.Run) > 0:
+		log.Fatal(errors.New("You can't specify tasks in main and run sections at the same time."))
+	case c.GetCmd() != "":
+		task, err := c.CreateTask()
+		if err != nil {
+			log.Fatal(err)
+		}
+		name := ".default"
+		task.Stdout = of.CreateOutlet(name, 0, false)
+		task.Stderr = of.CreateOutlet(name, 0, true)
+		tasks[name] = task
+	case len(c.Run) > 0:
+		i := 0
+		for name, run := range c.Run {
+			run.parent = c
+			task, err := run.CreateTask()
+			if err != nil {
+				log.Fatal(err)
+			}
+			task.Stdout = of.CreateOutlet(name, i, false)
+			task.Stderr = of.CreateOutlet(name, i, true)
+			tasks[name] = task
+			i++
+		}
+	default:
+		return nil, errors.New("Task not found")
+	}
+	return &tasks, nil
+}
+
 func (c *Config) GetDir() string {
 	switch {
 	case c.Dir != "":
@@ -87,7 +139,7 @@ func (c *Config) GetPidFile() string {
 func (c *Config) GetMatch() *regexp.Regexp {
 	match := c.Match
 
-	if ext := c.GetExt(); len(ext)>0 {
+	if ext := c.GetExt(); len(ext) > 0 {
 		match = fmt.Sprintf(".*\\.(%s)$", strings.Join(ext, "|"))
 	}
 
@@ -181,30 +233,4 @@ func (c *Config) GetDotFiles() bool {
 	default:
 		return DEFAULT_DOTFILES
 	}
-}
-
-func (c *Config) Tasks() (*map[string]*Task, error) {
-	tasks := make(map[string]*Task)
-	switch {
-	case c.GetCmd() != "" && len(c.Run) > 0:
-		panic(errors.New("You can't specify tasks in main and run sections at the same time."))
-	case c.GetCmd() != "":
-		task, err := NewTask(c)
-		if err != nil {
-			panic(err)
-		}
-		tasks[".default"] = task
-	case len(c.Run) > 0:
-		for name, run := range c.Run {
-			run.parent = c
-			task, err := NewTask(&run)
-			if err != nil {
-				panic(err)
-			}
-			tasks[name] = task
-		}
-	default:
-		return nil, errors.New("Task not found")
-	}
-	return &tasks, nil
 }
