@@ -71,11 +71,10 @@ func (c *Config) Tasks(of *OutletFactory) (*map[string]*Task, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		name := "command"
 		task.name = ""
-		task.Stdout = of.CreateOutlet(name, 0, false)
-		task.Stderr = of.CreateOutlet(name, 0, true)
-		tasks[name] = task
+		task.Stdout = of.CreateOutlet("command", 0, false)
+		task.Stderr = of.CreateOutlet("command", 0, true)
+		tasks[""] = task
 	case len(c.Run) > 0:
 		i := 0
 		for name, run := range c.Run {
