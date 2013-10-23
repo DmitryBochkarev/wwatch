@@ -45,27 +45,26 @@ delay = "1s"
 ### Example of multiple tasks
 
 ```toml
-cwd = "."
 delay = "1s"
 ignore = "^~.*$" #vim files
 before = "bash"
 before_args = ["-c", "rm -rf ./tmp/*"]
 
 [run.server]
-ext = "go"
+ext = ["go"]
 cmd = "bash"
 args = ["-c", "go run *.go"]
 pidfile = "tmp/server.pid"
 
 [run.less]
+match = ".*\\.less$" #same as ext=["less"]
 dir = "./app/assets/styles"
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
-match = ".*\\.less$" #same as ext=["less"]
 
 [run.uglifyjs]
+ext = ["js"]
 dir = "./app/assets/javascripts"
 cmd = "uglifyjs"
 args = ["app/assets/javascripts/app.js", "-o", "public/app.min.js"]
-ext = ["js"]
 ```
