@@ -15,6 +15,7 @@ Usage of wwatch:
   -dir=".": directory to watch
   -dotfiles=false: watch on dotfiles
   -ext="": extentions of files to watch: -ext='less,js,coffee'
+  -ignore="": regexp patter for ignore watch
   -match=".*": file(fullpath) match regexp
   -pidfile="": file that content pid of running process
   -recursive=false: walk recursive over directories
@@ -32,7 +33,6 @@ wwatch supports configuration files in [toml](https://github.com/mojombo/toml) f
 ### Example of single task
 
 ```toml
-dir = "./app/assets/styles"
 cwd = "."
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
@@ -43,24 +43,25 @@ delay = "1s"
 ### Example of multiple tasks
 
 ```toml
-dir = "./app/assets"
 cwd = "."
 delay = "1s"
+ignore = "^~.*$" #vim files
 
 [run.server]
-dir = "."
 ext = "go"
 cmd = "bash"
 args = ["-c", "go run *.go"]
 pidfile = "tmp/server.pid"
 
 [run.less]
+dir = "./app/assets/styles"
 cmd = "lessc"
 args = ["./app/assets/styles/style.less", "./public/style.css"]
-match = ".*\\.less$"
+match = ".*\\.less$" #same as ext="less"
 
 [run.uglifyjs]
+dir = "./app/assets/javascripts"
 cmd = "uglifyjs"
 args = ["app/assets/javascripts/app.js", "-o", "public/app.min.js"]
-match = ".*\\.js$"
+ext = "js"
 ```

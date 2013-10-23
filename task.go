@@ -21,6 +21,7 @@ type Task struct {
 	CmdArgs   []string
 	PidFile   string
 	Match     *regexp.Regexp
+	Ignore    *regexp.Regexp
 	Delay     time.Duration
 	Recursive bool
 	DotFiles  bool
@@ -38,6 +39,7 @@ func NewTask(c *Config) (*Task, error) {
 		CmdArgs:   c.GetCmdArgs(),
 		PidFile:   c.GetPidFile(),
 		Match:     c.GetMatch(),
+		Ignore:    c.GetIgnore(),
 		Delay:     c.GetDelay(),
 		Recursive: c.GetRecursive(),
 		DotFiles:  c.GetDotFiles(),
@@ -69,6 +71,10 @@ func (t *Task) StartWatch(event chan *fsnotify.FileEvent) {
 		}
 
 		if path != "." && !t.DotFiles && isDotfile(path) {
+			return filepath.SkipDir
+		}
+
+		if t.Ignore.MatchString(path) {
 			return filepath.SkipDir
 		}
 
@@ -105,16 +111,17 @@ func (t *Task) Run() {
 	for {
 		select {
 		case ev := <-event:
+			path := ev.Name
 			if ev.IsCreate() || ev.IsDelete() || ev.IsRename() {
 				t.StopWatch()
 				t.StartWatch(event)
 			}
 
-			if !t.DotFiles && isDotfile(ev.Name) {
+			if !t.DotFiles && isDotfile(path) {
 				break
 			}
 
-			if !t.Match.MatchString(ev.Name) {
+			if !t.Match.MatchString(path) || t.Ignore.MatchString(path) {
 				break
 			}
 

@@ -21,6 +21,7 @@ type Config struct {
 	PidFile   string   `toml:"pidfile"`
 	Match     string   `toml:"match"`
 	Ext       string   `toml:"ext"`
+	Ignore       string   `toml:"ignore"`
 	Delay     string   `toml:"delay"`
 	Recursive *bool    `toml:"recursive"`
 	DotFiles  *bool    `toml:"dotfiles"`
@@ -144,6 +145,21 @@ func (c *Config) GetExt() string {
 		return c.parent.GetExt()
 	default:
 		return ""
+	}
+}
+
+func (c *Config) GetIgnore() *regexp.Regexp {
+	switch {
+	case c.Ignore != "":
+		rx, err := regexp.Compile(c.Ignore)
+		if err != nil {
+			panic(err)
+		}
+		return rx
+	case c.parent != nil:
+		return c.parent.GetIgnore()
+	default:
+		return regexp.MustCompile("")
 	}
 }
 

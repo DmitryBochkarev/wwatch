@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	commandLineDir, commandLineCwd, commandLineMatchPattern, commandLineExt string
+	commandLineDir, commandLineCwd, commandLineMatchPattern, commandLineExt, commandLineIgnorePattern string
 	commandLineDelay                                                        string
 	commandLineCommand, commandLinePidFile                                  string
 	commandLineConfig                                                       string
@@ -32,6 +32,7 @@ func init() {
 	flag.StringVar(&commandLineCwd, "cwd", DEFAULT_CWD, "current working directory")
 	flag.StringVar(&commandLineMatchPattern, "match", DEFAULT_MATCH_PATTERN, "file(fullpath) match regexp")
 	flag.StringVar(&commandLineExt, "ext", "", "extentions of files to watch: -ext='less,js,coffee'")
+	flag.StringVar(&commandLineIgnorePattern, "ignore", "", "regexp patter for ignore watch")
 	flag.StringVar(&commandLineDelay, "delay", DEFAULT_DELAY, "delay before rerun cmd")
 	flag.StringVar(&commandLineCommand, "cmd", "", "command to run")
 	flag.StringVar(&commandLinePidFile, "pidfile", "", "file that content pid of running process")
