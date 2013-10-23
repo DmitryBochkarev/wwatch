@@ -170,13 +170,16 @@ func (t *Task) Exec() {
 		args[i] = os.Expand(arg, os.Getenv)
 	}
 
-	log.Printf("run %s %v\n", exe, args)
+	log.Printf("run: %s %v\n", exe, args)
 	t.command = exec.Command(exe, args...)
 	t.command.Dir = t.Cwd
 	t.command.Stdout = os.Stdout
 	t.command.Stderr = os.Stderr
 	t.command.Start()
-	go t.command.Wait()
+	go func() {
+		t.command.Wait()
+		log.Printf("command exited: %s %v\n", exe, args)
+	}()
 }
 
 func (t *Task) Stop() {
