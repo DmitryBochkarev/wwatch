@@ -33,6 +33,7 @@ type Task struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
+	name     string
 	watchers []*fsnotify.Watcher
 	command  *exec.Cmd
 	mx       sync.Mutex
@@ -98,7 +99,7 @@ func (t *Task) Run() {
 			args[i] = os.Expand(arg, os.Getenv)
 		}
 
-		log.Printf("run onstart command %s %v\n", exe, args)
+		log.Printf("%s run onstart command %s %v\n", t.name, exe, args)
 		command := exec.Command(exe, args...)
 		command.Dir = t.Cwd
 		command.Stdout = t.Stdout
@@ -114,6 +115,7 @@ func (t *Task) Run() {
 	t.StartWatch(event)
 
 	prevPath := ""
+
 	var timer <-chan time.Time
 	for {
 		select {
@@ -136,8 +138,9 @@ func (t *Task) Run() {
 				log.Printf("%s", path)
 
 				if t.Delay >= time.Duration(500*time.Millisecond) {
-					log.Printf("wait %s before rerun...\n", t.Delay)
+					log.Printf("%s wait %s before rerun...\n", t.name, t.Delay)
 				}
+
 				prevPath = path
 			}
 
@@ -160,7 +163,7 @@ func (t *Task) Exec() {
 		args[i] = os.Expand(arg, os.Getenv)
 	}
 
-	log.Printf("run: %s %v", exe, args)
+	log.Printf("%s run: %s %v", t.name, exe, args)
 	t.command = exec.Command(exe, args...)
 	t.command.Dir = t.Cwd
 	t.command.Stdout = t.Stdout
@@ -168,7 +171,7 @@ func (t *Task) Exec() {
 	t.command.Start()
 	go func() {
 		t.command.Wait()
-		log.Printf("process exited: %s %v", exe, args)
+		log.Printf("%s process exited", t.name)
 	}()
 }
 

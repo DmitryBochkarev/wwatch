@@ -72,6 +72,7 @@ func (c *Config) Tasks(of *OutletFactory) (*map[string]*Task, error) {
 			log.Fatal(err)
 		}
 		name := ".default"
+		task.name = ""
 		task.Stdout = of.CreateOutlet(name, 0, false)
 		task.Stderr = of.CreateOutlet(name, 0, true)
 		tasks[name] = task
@@ -83,6 +84,7 @@ func (c *Config) Tasks(of *OutletFactory) (*map[string]*Task, error) {
 			if err != nil {
 				log.Fatal(err)
 			}
+			task.name = name
 			task.Stdout = of.CreateOutlet(name, i, false)
 			task.Stderr = of.CreateOutlet(name, i, true)
 			tasks[name] = task
