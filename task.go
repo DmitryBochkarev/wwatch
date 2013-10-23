@@ -113,6 +113,7 @@ func (t *Task) Run() {
 	event := make(chan *fsnotify.FileEvent)
 	t.StartWatch(event)
 
+	prevPath := ""
 	var timer <-chan time.Time
 	for {
 		select {
@@ -131,14 +132,18 @@ func (t *Task) Run() {
 				break
 			}
 
-			log.Printf("File changed(%s)", ev.String())
+			if prevPath != path {
+				log.Printf("%s", path)
 
-			if t.Delay >= time.Duration(500*time.Millisecond) {
-				log.Printf("wait %s before rerun...\n", t.Delay)
+				if t.Delay >= time.Duration(500*time.Millisecond) {
+					log.Printf("wait %s before rerun...\n", t.Delay)
+				}
+				prevPath = path
 			}
 
 			timer = time.After(t.Delay)
 		case <-timer:
+			prevPath = ""
 			t.Stop()
 			t.Exec()
 		}
@@ -163,7 +168,7 @@ func (t *Task) Exec() {
 	t.command.Start()
 	go func() {
 		t.command.Wait()
-		log.Printf("pocess exited: %s %v", exe, args)
+		log.Printf("process exited: %s %v", exe, args)
 	}()
 }
 
