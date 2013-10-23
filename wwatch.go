@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 )
 
 const (
@@ -79,11 +80,20 @@ func main() {
 
 		config.PidFile = commandLinePidFile
 	case commandLineConfig != "":
+		configDir, err := filepath.Abs(filepath.Dir(commandLineConfig))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("change working directory to %s", configDir)
+		if err := os.Chdir(configDir); err != nil {
+			log.Fatal(err)
+		}
+
 		config.Load(commandLineConfig)
 	}
 
 	tasks, err := config.Tasks()
-
 	if err != nil {
 		log.Fatal(err)
 	}

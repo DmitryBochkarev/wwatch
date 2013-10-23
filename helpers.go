@@ -53,18 +53,6 @@ func parseCommandString(commandString string) (exe string, args []string) {
 	return
 }
 
-func resolvePath(start string, parts ...string) (path string) {
-	path = start
-	for _, part := range parts {
-		if filepath.IsAbs(part) {
-			path = part
-			continue
-		}
-		path = filepath.Join(path, part)
-	}
-	return
-}
-
 func isDotfile(path string) bool {
 	return dotFileRx.MatchString(filepath.Base(path))
 }

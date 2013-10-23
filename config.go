@@ -6,8 +6,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"log"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -31,17 +29,11 @@ type Config struct {
 
 	Run map[string]Config
 
-	configFile string
-	parent     *Config
+	parent *Config
 }
 
 func (c *Config) Load(file string) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	c.configFile = resolvePath(cwd, file)
-	configData, err := ioutil.ReadFile(c.configFile)
+	configData, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,56 +42,26 @@ func (c *Config) Load(file string) {
 	}
 }
 
-func (c *Config) GetConfigPath() string {
-	switch {
-	case c.configFile != "":
-		return filepath.Dir(c.configFile)
-	case c.parent != nil:
-		return c.parent.GetConfigPath()
-	default:
-		return ""
-	}
-}
-
-func (c *Config) ResolveFilepath(relativePath string) string {
-	path := relativePath
-	if configPath := c.GetConfigPath(); configPath != "" {
-		path = resolvePath(configPath, path)
-	}
-
-	return path
-}
-
 func (c *Config) GetDir() string {
-	var dir string
 	switch {
 	case c.Dir != "":
-		dir = c.Dir
+		return c.Dir
 	case c.parent != nil:
-		dir = c.parent.GetDir()
+		return c.parent.GetDir()
 	default:
-		dir = DEFAULT_DIR
+		return DEFAULT_DIR
 	}
-
-	dir = c.ResolveFilepath(dir)
-
-	return dir
 }
 
 func (c *Config) GetCwd() string {
-	var dir string
 	switch {
 	case c.Cwd != "":
-		dir = c.Cwd
+		return c.Cwd
 	case c.parent != nil:
-		dir = c.parent.GetCwd()
+		return c.parent.GetCwd()
 	default:
-		dir = DEFAULT_CWD
+		return DEFAULT_CWD
 	}
-
-	dir = c.ResolveFilepath(dir)
-
-	return dir
 }
 
 func (c *Config) GetCmd() string {
@@ -119,10 +81,7 @@ func (c *Config) GetOnStartCmdArgs() []string {
 }
 
 func (c *Config) GetPidFile() string {
-	if c.PidFile != "" {
-		return c.ResolveFilepath(c.PidFile)
-	}
-	return ""
+	return c.PidFile
 }
 
 func (c *Config) GetMatch() *regexp.Regexp {
