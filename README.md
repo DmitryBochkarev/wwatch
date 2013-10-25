@@ -47,8 +47,8 @@ delay = "1s"
 ```toml
 delay = "1s"
 ignore = "^~.*$" #vim files
-before = "bash"
-before_args = ["-c", "rm -rf ./tmp/*"]
+onstart = "bash"
+onstart_args = ["-c", "rm -rf ./tmp/*"]
 
 [run.server]
 ext = ["go"]
@@ -58,13 +58,14 @@ pidfile = "tmp/server.pid"
 
 [run.less]
 match = ".*\\.less$" #same as ext=["less"]
-dir = "./app/assets/styles"
+dir = "app/assets/styles"
 cmd = "lessc"
-args = ["./app/assets/styles/style.less", "./public/style.css"]
+args = ["app/assets/styles/style.less", "public/style.css"]
 
 [run.uglifyjs]
+delay = "100ms"
 ext = ["js"]
-dir = "./app/assets/javascripts"
+dir = "app/assets/javascripts"
 cmd = "uglifyjs"
 args = ["app/assets/javascripts/app.js", "-o", "public/app.min.js"]
 ```
