@@ -73,14 +73,8 @@ func main() {
 		config.Recursive = &commandLineRecursive
 		config.DotFiles = &commandLineDotFiles
 
-		onStartCmd, onStartCmdArgs := parseCommandString(commandLineOnStartCommand)
-		config.OnStartCmd = onStartCmd
-		config.OnStartCmdArgs = onStartCmdArgs
-
-		cmd, cmdArgs := parseCommandString(commandLineCommand)
-		config.Cmd = cmd
-		config.CmdArgs = cmdArgs
-
+		config.OnStartCmd = parseCommandString(commandLineOnStartCommand)
+		config.Cmd = parseCommandString(commandLineCommand)
 		config.PidFile = commandLinePidFile
 	case commandLineConfig != "":
 		config.Load(commandLineConfig)
@@ -108,15 +102,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, mainSection := (*tasks)[""]; config.OnStartCmd != "" && !mainSection {
-		exe := os.Expand(config.OnStartCmd, os.Getenv)
-		var args = make([]string, len(config.OnStartCmdArgs))
-		for i, arg := range config.OnStartCmdArgs {
+	if _, mainSection := (*tasks)[""]; len(config.OnStartCmd) > 0 && !mainSection {
+		var args = make([]string, len(config.OnStartCmd))
+		for i, arg := range config.OnStartCmd {
 			args[i] = os.Expand(arg, os.Getenv)
 		}
 
-		log.Printf("run main onstart command %s %v\n", exe, strings.Join(args, " "))
-		command := exec.Command(exe, args...)
+		log.Printf("run main onstart command %s", strings.Join(args, " "))
+		command := exec.Command(args[0], args[1:]...)
 		command.Dir = config.Cwd
 		command.Stdout = outletFactory
 		command.Stderr = outletFactory

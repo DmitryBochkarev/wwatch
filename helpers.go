@@ -44,13 +44,12 @@ func startWatcher(dir string, event chan *fsnotify.FileEvent) (*fsnotify.Watcher
 	return watcher, nil
 }
 
-func parseCommandString(commandString string) (exe string, args []string) {
-	cmdSplit := strings.SplitN(commandString, " ", 2)
-	exe = cmdSplit[0]
-	if len(cmdSplit) > 1 {
-		args = strings.Split(cmdSplit[1], " ")
+func parseCommandString(commandString string) []string {
+	cmdargs := strings.SplitN(commandString, " ", -1)
+	if len(cmdargs) > 0 && cmdargs[0] == "" {
+		return []string{}
 	}
-	return
+	return cmdargs
 }
 
 func isDotfile(path string) bool {

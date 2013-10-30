@@ -12,20 +12,18 @@ import (
 )
 
 type Config struct {
-	Dir            string   `toml:"dir"`
-	Cwd            string   `toml:"cwd"`
-	Cmd            string   `toml:"cmd"`
-	CmdArgs        []string `toml:"args"`
-	OnStartCmd     string   `toml:"onstart"`
-	OnStartCmdArgs []string `toml:"onstart_args"`
-	PidFile        string   `toml:"pidfile"`
-	Match          string   `toml:"match"`
-	Ext            []string `toml:"ext"`
-	Ignore         string   `toml:"ignore"`
-	After          *bool    `toml:"after"`
-	Delay          string   `toml:"delay"`
-	Recursive      *bool    `toml:"recursive"`
-	DotFiles       *bool    `toml:"dotfiles"`
+	Dir        string   `toml:"dir"`
+	Cwd        string   `toml:"cwd"`
+	Cmd        []string `toml:"cmd"`
+	OnStartCmd []string `toml:"onstart"`
+	PidFile    string   `toml:"pidfile"`
+	Match      string   `toml:"match"`
+	Ext        []string `toml:"ext"`
+	Ignore     string   `toml:"ignore"`
+	After      *bool    `toml:"after"`
+	Delay      string   `toml:"delay"`
+	Recursive  *bool    `toml:"recursive"`
+	DotFiles   *bool    `toml:"dotfiles"`
 
 	Run map[string]Config
 
@@ -44,19 +42,17 @@ func (c *Config) Load(file string) {
 
 func (c *Config) CreateTask() (*Task, error) {
 	task := &Task{
-		Dir:            c.GetDir(),
-		Cwd:            c.GetCwd(),
-		Cmd:            c.GetCmd(),
-		CmdArgs:        c.GetCmdArgs(),
-		OnStartCmd:     c.GetOnStartCmd(),
-		OnStartCmdArgs: c.GetOnStartCmdArgs(),
-		PidFile:        c.GetPidFile(),
-		Match:          c.GetMatch(),
-		Ignore:         c.GetIgnore(),
-		After:          c.GetAfter(),
-		Delay:          c.GetDelay(),
-		Recursive:      c.GetRecursive(),
-		DotFiles:       c.GetDotFiles(),
+		Dir:        c.GetDir(),
+		Cwd:        c.GetCwd(),
+		Cmd:        c.GetCmd(),
+		OnStartCmd: c.GetOnStartCmd(),
+		PidFile:    c.GetPidFile(),
+		Match:      c.GetMatch(),
+		Ignore:     c.GetIgnore(),
+		After:      c.GetAfter(),
+		Delay:      c.GetDelay(),
+		Recursive:  c.GetRecursive(),
+		DotFiles:   c.GetDotFiles(),
 	}
 	return task, nil
 }
@@ -64,9 +60,9 @@ func (c *Config) CreateTask() (*Task, error) {
 func (c *Config) Tasks(of *OutletFactory) (*map[string]*Task, error) {
 	tasks := make(map[string]*Task)
 	switch {
-	case c.GetCmd() != "" && len(c.Run) > 0:
+	case len(c.GetCmd()) > 0 && len(c.Run) > 0:
 		log.Fatal(errors.New("You can't specify tasks in main and run sections at the same time."))
-	case c.GetCmd() != "":
+	case len(c.GetCmd()) > 0:
 		task, err := c.CreateTask()
 		if err != nil {
 			log.Fatal(err)
@@ -117,20 +113,12 @@ func (c *Config) GetCwd() string {
 	}
 }
 
-func (c *Config) GetCmd() string {
+func (c *Config) GetCmd() []string {
 	return c.Cmd
 }
 
-func (c *Config) GetCmdArgs() []string {
-	return c.CmdArgs
-}
-
-func (c *Config) GetOnStartCmd() string {
+func (c *Config) GetOnStartCmd() []string {
 	return c.OnStartCmd
-}
-
-func (c *Config) GetOnStartCmdArgs() []string {
-	return c.OnStartCmdArgs
 }
 
 func (c *Config) GetPidFile() string {

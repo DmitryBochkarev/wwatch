@@ -36,8 +36,7 @@ wwatch supports configuration files in [toml](https://github.com/mojombo/toml) f
 
 ```toml
 cwd = "." #relative to config file
-cmd = "lessc"
-args = ["./app/assets/styles/style.less", "./public/style.css"]
+cmd = ["lessc", "./app/assets/styles/style.less", "./public/style.css"]
 ext = ["less"]
 delay = "1s"
 ```
@@ -47,25 +46,21 @@ delay = "1s"
 ```toml
 delay = "1s"
 ignore = "^~.*$" #vim files
-onstart = "bash"
-onstart_args = ["-c", "rm -rf ./tmp/*"]
+onstart = ["bash", "-c", "rm -rf ./tmp/*"]
 
 [run.server]
 ext = ["go"]
-cmd = "bash"
-args = ["-c", "go run *.go"]
+cmd = ["bash", "-c", "go run *.go"]
 pidfile = "tmp/server.pid"
 
 [run.less]
 match = ".*\\.less$" #same as ext=["less"]
 dir = "app/assets/styles"
-cmd = "lessc"
-args = ["app/assets/styles/style.less", "public/style.css"]
+cmd = ["lessc", "app/assets/styles/style.less", "public/style.css"]
 
 [run.uglifyjs]
 delay = "100ms"
 ext = ["js"]
 dir = "app/assets/javascripts"
-cmd = "uglifyjs"
-args = ["app/assets/javascripts/app.js", "-o", "public/app.min.js"]
+cmd = ["uglifyjs", "app/assets/javascripts/app.js", "-o", "public/app.min.js"]
 ```

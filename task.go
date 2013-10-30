@@ -17,19 +17,17 @@ import (
 )
 
 type Task struct {
-	Dir            string
-	Cwd            string
-	Cmd            string
-	CmdArgs        []string
-	OnStartCmd     string
-	OnStartCmdArgs []string
-	PidFile        string
-	Match          *regexp.Regexp
-	Ignore         *regexp.Regexp
-	After          bool
-	Delay          time.Duration
-	Recursive      bool
-	DotFiles       bool
+	Dir        string
+	Cwd        string
+	Cmd        []string
+	OnStartCmd []string
+	PidFile    string
+	Match      *regexp.Regexp
+	Ignore     *regexp.Regexp
+	After      bool
+	Delay      time.Duration
+	Recursive  bool
+	DotFiles   bool
 
 	Stdout io.Writer
 	Stderr io.Writer
@@ -93,15 +91,14 @@ func (t *Task) StopWatch() {
 }
 
 func (t *Task) Run() {
-	if t.OnStartCmd != "" {
-		exe := os.Expand(t.OnStartCmd, os.Getenv)
-		var args = make([]string, len(t.OnStartCmdArgs))
-		for i, arg := range t.OnStartCmdArgs {
+	if len(t.OnStartCmd) > 0 {
+		var args = make([]string, len(t.OnStartCmd))
+		for i, arg := range t.OnStartCmd {
 			args[i] = os.Expand(arg, os.Getenv)
 		}
 
-		log.Printf("%s run onstart command %s %v\n", t.name, exe, strings.Join(args, " "))
-		command := exec.Command(exe, args...)
+		log.Printf("%s run onstart command %s", t.name, strings.Join(args, " "))
+		command := exec.Command(args[0], args[1:]...)
 		command.Dir = t.Cwd
 		command.Stdout = t.Stdout
 		command.Stderr = t.Stderr
@@ -157,15 +154,14 @@ func (t *Task) Run() {
 func (t *Task) Exec() {
 	t.mx.Lock()
 	defer t.mx.Unlock()
-	exe := os.Expand(t.Cmd, os.Getenv)
 
-	var args = make([]string, len(t.CmdArgs))
-	for i, arg := range t.CmdArgs {
+	var args = make([]string, len(t.Cmd))
+	for i, arg := range t.Cmd {
 		args[i] = os.Expand(arg, os.Getenv)
 	}
 
-	log.Printf("%s run: %s %v", t.name, exe, strings.Join(args, " "))
-	t.command = exec.Command(exe, args...)
+	log.Printf("%s run: %s", t.name, strings.Join(args, " "))
+	t.command = exec.Command(args[0], args[1:]...)
 	t.command.Dir = t.Cwd
 	t.command.Stdout = t.Stdout
 	t.command.Stderr = t.Stderr
